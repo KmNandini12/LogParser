@@ -1,0 +1,162 @@
+[
+  {
+    "id": 1,
+    "title": "Ingress Gateway HTTP 502 Bad Gateway to Order Service",
+    "service_name": "ingress-gateway",
+    "root_cause_summary": "Upstream 502 Bad Gateway triggered by order-service pod CPU starvation during sudden order surge. The ingress envoy proxy terminated connections after 15000ms timeout.",
+    "remediation_steps": "1. Scale order-service horizontal pod autoscaler (HPA) min replicas from 3 to 8. 2. Increase CPU limit from 500m to 2000m. 3. Adjust ingress upstream idle timeout to 30s.",
+    "error_codes": ["ERR_502_BAD_GATEWAY", "HTTP 502", "502 Bad Gateway", "upstream connect error"]
+  },
+  {
+    "id": 2,
+    "title": "OrderProcessor NullPointerException on Checkout Payload",
+    "service_name": "order-service",
+    "root_cause_summary": "Unhandled exception NullPointerException at OrderProcessor.java:142 occurred because customer checkout payload contained null shipping address fields for guest users.",
+    "remediation_steps": "1. Deploy hotfix release adding @NotNull validation and null-safe address fallback in OrderProcessor.java. 2. Reprocess failed orders from dead-letter queue.",
+    "error_codes": ["NullPointerException at OrderProcessor.java:142", "NullPointerException", "OrderProcessor.java"]
+  },
+  {
+    "id": 3,
+    "title": "HikariCP Connection Pool Exhaustion on Payment Database",
+    "service_name": "payment-service",
+    "root_cause_summary": "HikariPool-1 - Connection is not available, request timed out after 30000ms. An unindexed query on the payment_transactions table locked database threads, starving the pool.",
+    "remediation_steps": "1. Terminate long-running locking queries using pg_terminate_backend. 2. Create composite index on payment_transactions(customer_id, created_at). 3. Increase maximumPoolSize from 20 to 50 in application.yml.",
+    "error_codes": ["HikariPool-1 - Connection is not available", "HikariCP", "Connection pool exhausted", "request timed out after 30000ms"]
+  },
+  {
+    "id": 4,
+    "title": "Redis Cache OOM Out of Memory Crash",
+    "service_name": "session-service",
+    "root_cause_summary": "OOM command not allowed when used memory > 'maxmemory'. Session tokens were stored without expiration TTL, causing redis-server memory consumption to exceed 8GB limit.",
+    "remediation_steps": "1. Configure volatile-lru eviction policy in redis.conf (maxmemory-policy volatile-lru). 2. Run emergency script to expire keys older than 7 days. 3. Ensure all session keys include EX 86400 TTL.",
+    "error_codes": ["OOM command not allowed when used memory", "Redis OOM", "maxmemory exceeded"]
+  },
+  {
+    "id": 5,
+    "title": "Kafka Consumer Rebalance Storm on Notifications Group",
+    "service_name": "notification-service",
+    "root_cause_summary": "CommitFailedException: Consumer group 'email-notifications' rebalance triggered because batch processing exceeded max.poll.interval.ms (300000ms) during SMTP provider outage.",
+    "remediation_steps": "1. Increase max.poll.interval.ms to 600000ms. 2. Reduce max.poll.records from 500 to 50. 3. Wrap SMTP calls in a circuit breaker with asynchronous thread pool delivery.",
+    "error_codes": ["CommitFailedException", "Consumer group rebalance", "max.poll.interval.ms"]
+  },
+  {
+    "id": 6,
+    "title": "HDFS DataNode SocketTimeoutException Disk Saturation",
+    "service_name": "hdfs-datanode",
+    "root_cause_summary": "DataNode$DataXceiver: Got exception while serving block blk_1073741825: java.net.SocketTimeoutException: 60000 millis timeout while waiting for channel to be ready for read. Underlying disk I/O utilization reached 100%.",
+    "remediation_steps": "1. Replace failing hard drive /dev/sdc on DataNode 10.0.0.14. 2. Trigger HDFS balancer to redistribute data blocks away from saturated nodes. 3. Increase dfs.datanode.socket.write.timeout.",
+    "error_codes": ["SocketTimeoutException", "dfs.DataNode$DataXceiver", "java.net.SocketTimeoutException", "blk_1073741825"]
+  },
+  {
+    "id": 7,
+    "title": "Stripe Payment Gateway HTTP 504 Gateway Timeout",
+    "service_name": "payment-service",
+    "root_cause_summary": "Payment transaction failed with HTTP 504 Gateway Timeout connecting to https://api.stripe.com/v1/charges. Network latency spike on external transit provider caused gateway requests to time out.",
+    "remediation_steps": "1. Enable automatic Stripe idempotency retry with exponential backoff. 2. Trip resilience4j circuit breaker to route transactions through secondary payment processor (Adyen).",
+    "error_codes": ["HTTP 504 Gateway Timeout", "api.stripe.com", "Payment transaction failed", "504 Gateway Timeout"]
+  },
+  {
+    "id": 8,
+    "title": "Istio mTLS Certificate Expiration Causing ETIMEDOUT",
+    "service_name": "auth-service",
+    "root_cause_summary": "Connection lost with ETIMEDOUT connecting to auth-service:443. The intermediate CA certificate in Istio Envoy proxy expired, causing strict mTLS handshake failures across the mesh.",
+    "remediation_steps": "1. Rotate Istio mesh root CA and restart istiod controller. 2. Run rollout restart deployment for all proxy sidecars. 3. Configure automated cert-manager renewal alert 30 days prior to expiry.",
+    "error_codes": ["ETIMEDOUT", "mTLS handshake failed", "certificate expired", "auth-service:443"]
+  },
+  {
+    "id": 9,
+    "title": "Kubernetes OOMKilled Pod Termination Exit Code 137",
+    "service_name": "search-indexer",
+    "root_cause_summary": "Container search-worker was terminated by Linux kernel cgroup OOM killer (exit code 137). Unbounded in-memory aggregation of 2M documents consumed more than the 4Gi container memory limit.",
+    "remediation_steps": "1. Increase pod memory request to 4Gi and limit to 8Gi. 2. Implement pagination and streaming chunking (chunk_size=1000) in document indexer to avoid loading entire collections into RAM.",
+    "error_codes": ["exit code 137", "OOMKilled", "cgroup out of memory"]
+  },
+  {
+    "id": 10,
+    "title": "Elasticsearch 429 Flood Stage Disk Watermark Exceeded",
+    "service_name": "logging-service",
+    "root_cause_summary": "Elasticsearch cluster rejected write index operations with ClusterBlockException: 429 flood stage disk watermark [95%] exceeded on node elastic-data-2.",
+    "remediation_steps": "1. Delete indices older than 30 days via curator/ILM policy. 2. Increase persistent volume claim storage size from 500GB to 1TB. 3. Unlock read-only index block with index.blocks.read_only_allow_delete: null.",
+    "error_codes": ["ClusterBlockException", "flood stage disk watermark [95%] exceeded", "429 Too Many Requests"]
+  },
+  {
+    "id": 11,
+    "title": "PostgreSQL Deadlock Detected on Orders and Inventory Tables",
+    "service_name": "order-service",
+    "root_cause_summary": "DeadlockDetected: Process 41258 waits for ShareLock on transaction 891244; Process 41259 waits for ExclusiveLock on relation orders. Two concurrent checkout requests locked rows in opposite order (orders -> inventory vs inventory -> orders).",
+    "remediation_steps": "1. Standardize lock acquisition order in transactional code: always acquire inventory locks before order locks. 2. Add client-side transaction retry on SQLSTATE 40P01.",
+    "error_codes": ["DeadlockDetected", "deadlock detected", "SQLSTATE 40P01", "ShareLock on transaction"]
+  },
+  {
+    "id": 12,
+    "title": "Third-Party API HTTP 429 Too Many Requests Rate Limiting",
+    "service_name": "shipping-service",
+    "root_cause_summary": "FedEx Shipping API returned HTTP 429 Too Many Requests with header Retry-After: 60. Batch label generation sent 120 req/s, exceeding our tier limit of 50 req/s.",
+    "remediation_steps": "1. Implement token bucket rate limiter in ShippingClient capped at 40 req/s. 2. Respect Retry-After header with jittered exponential backoff.",
+    "error_codes": ["HTTP 429", "429 Too Many Requests", "Rate limit exceeded", "Retry-After"]
+  },
+  {
+    "id": 13,
+    "title": "JVM Metaspace OutOfMemoryError in Dynamic Classloading",
+    "service_name": "report-generator",
+    "root_cause_summary": "java.lang.OutOfMemoryError: Metaspace. JasperReports compiled report templates dynamically into bytecode without unloading classloaders, leaking Metaspace memory until container crash.",
+    "remediation_steps": "1. Set JVM flag -XX:MaxMetaspaceSize=512m. 2. Enable JasperReports compiled template caching to reuse generated classes across invocations.",
+    "error_codes": ["java.lang.OutOfMemoryError: Metaspace", "OutOfMemoryError: Metaspace", "Metaspace"]
+  },
+  {
+    "id": 14,
+    "title": "DNS Lookup ENOTFOUND on Internal CoreDNS Service",
+    "service_name": "api-gateway",
+    "root_cause_summary": "getaddrinfo ENOTFOUND inventory-service.default.svc.cluster.local. CoreDNS pods became unresponsive due to an upstream UDP packet drop under heavy DNS query flood.",
+    "remediation_steps": "1. Deploy NodeLocal DNSCache daemonset to cache DNS queries locally on each node. 2. Scale CoreDNS replicas from 2 to 5. 3. Enable TCP fallback for DNS queries.",
+    "error_codes": ["ENOTFOUND", "getaddrinfo ENOTFOUND", "DNS resolution failure"]
+  },
+  {
+    "id": 15,
+    "title": "RabbitMQ Delivery Acknowledgement Timeout Precondition Failed",
+    "service_name": "billing-service",
+    "root_cause_summary": "Channel closed: PRECONDITION_FAILED - delivery acknowledgement on channel 1 timed out after 1800000 ms. Consumer held unacked message while executing long PDF generation without heartbeat.",
+    "remediation_steps": "1. Acknowledge message immediately and offload PDF generation to background worker pool. 2. Configure consumer_timeout = 3600000 in rabbitmq.conf.",
+    "error_codes": ["PRECONDITION_FAILED - delivery acknowledgement", "delivery acknowledgement timed out", "channel closed"]
+  },
+  {
+    "id": 16,
+    "title": "Cassandra ReadTimeoutException on LOCAL_QUORUM Consistency",
+    "service_name": "telemetry-service",
+    "root_cause_summary": "Cassandra timeout during read query at consistency LOCAL_QUORUM (2 responses were required but only 1 replica responded within 5000ms). Node cassandra-3 was undergoing JVM stop-the-world GC pause.",
+    "remediation_steps": "1. Tune Shenandoah/G1 GC flags on Cassandra nodes to cap maximum GC pause under 150ms. 2. Adjust client read_request_timeout_in_ms to 8000ms.",
+    "error_codes": ["ReadTimeoutException", "LOCAL_QUORUM", "Cassandra timeout during read query"]
+  },
+  {
+    "id": 20,
+    "title": "SSL Handshake Failed Certificate Expired on Webhook Endpoint",
+    "service_name": "webhook-dispatcher",
+    "root_cause_summary": "SSLHandshakeException: PKIX path validation failed: java.security.cert.CertificateExpiredException: NotAfter: Fri Oct 02 12:00:00 UTC 2026. Target partner webhook endpoint certificate expired.",
+    "remediation_steps": "1. Contact partner operations team to renew SSL/TLS certificate. 2. Add pre-flight certificate expiration monitoring in webhook dispatcher to alert before expiration.",
+    "error_codes": ["SSLHandshakeException", "CertificateExpiredException", "PKIX path validation failed"]
+  },
+  {
+    "id": 17,
+    "title": "JWT Signature Verification Failed Due to Server Clock Skew",
+    "service_name": "auth-service",
+    "root_cause_summary": "JWTExpiredException: The token is expired (nbf claim in future). NTP synchronization daemon (chronyd) failed on worker node k8s-node-04, causing an 8-minute forward clock drift.",
+    "remediation_steps": "1. Restart chronyd service and re-sync hardware clock with AWS NTP pool. 2. Configure JWT validator with 60s clock skew tolerance (withClockSkew(60)).",
+    "error_codes": ["JWTExpiredException", "token is expired", "clock skew", "nbf claim"]
+  },
+  {
+    "id": 18,
+    "title": "gRPC UNAVAILABLE Upstream Reset Before Response Headers",
+    "service_name": "user-profile-service",
+    "root_cause_summary": "StatusRuntimeException: UNAVAILABLE: upstream connect error or disconnect/reset before headers. reset reason: connection termination. The user-profile-service gRPC server reached max concurrent streams limit (100).",
+    "remediation_steps": "1. Increase NettyServerBuilder.maxConcurrentCallsPerConnection to 1000. 2. Configure keepAliveTime to 30s to detect dead connections proactively.",
+    "error_codes": ["UNAVAILABLE: upstream connect error", "reset reason: connection termination", "StatusRuntimeException: UNAVAILABLE"]
+  },
+  {
+    "id": 19,
+    "title": "Database Read-Only File System on Amazon RDS EBS Vol",
+    "service_name": "analytics-db",
+    "root_cause_summary": "OperationalError: could not write to file 'base/16384/pgsql_tmp': Read-only file system. AWS EBS volume underlying PostgreSQL entered degraded read-only state following storage hardware fault.",
+    "remediation_steps": "1. Trigger immediate Multi-AZ failover to healthy secondary replica. 2. Terminate and recreate degraded RDS instance storage volume.",
+    "error_codes": ["Read-only file system", "could not write to file", "pgsql_tmp"]
+  }
+]
